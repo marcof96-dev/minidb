@@ -3,6 +3,7 @@
 #include <string.h>
 #include "hashtable.h"
 #include "string_util.h"
+#include "xmalloc.h"
 
 
 struct ht_item{
@@ -27,6 +28,8 @@ int get_capacity(struct hash_table *ht){
     return ht -> capacity;
 }
 
+ 
+
 static size_t hash(char *str, size_t num_of_buckets){
     size_t hash = 5381;
     int c;
@@ -37,10 +40,7 @@ static size_t hash(char *str, size_t num_of_buckets){
 }
 
 struct ht_item *init_item(char *key, char *value){
-    struct ht_item  *item = malloc(sizeof(struct ht_item));
-    if(item == NULL){
-        return NULL;
-    }
+    struct ht_item  *item = xmalloc(sizeof(struct ht_item));
     item -> key = cp_string(key);//copio il valore della stringa per renderlo indipendente dal puntatore passato
     item -> value = cp_string(value);
     item -> next = NULL; //Inizializzo a null
@@ -49,12 +49,9 @@ struct ht_item *init_item(char *key, char *value){
 
 //Initializing hash_table struct. Setting a fixed size in start phase of the  project
 struct hash_table *init_ht(void){
-    struct hash_table *ht = malloc(sizeof(struct hash_table));
-    if(ht == NULL){
-        return NULL;
-    }
+    struct hash_table *ht = xmalloc(sizeof(struct hash_table));
     ht -> capacity = 5; //100 per ora è un placeholder
-    ht -> item = calloc(ht -> capacity,sizeof(struct ht_item*));
+    ht -> item = xcalloc(ht -> capacity,sizeof(struct ht_item*));
     ht -> counting = 0;
     return ht;
 }
@@ -69,14 +66,14 @@ double load_factor(struct hash_table *ht){
 
 static void resize_hash_table(struct hash_table *ht){
     printf("Facendo il resize...");
-    struct hash_table *new_ht = malloc(sizeof(struct hash_table));
+    struct hash_table *new_ht = xmalloc(sizeof(struct hash_table));
     new_ht -> capacity = 2*ht->capacity; //100 per ora è un placeholder
-    new_ht -> item = calloc(new_ht -> capacity,sizeof(struct ht_item*));
+    new_ht -> item = xcalloc(new_ht -> capacity,sizeof(struct ht_item*));
     new_ht -> counting = 0;
     for(int i = 0; i<ht -> capacity; i++){
         struct ht_item *item = ht -> item[i];
         if(item != NULL){
-            for (struct ht_item *item = ht->item[i]; item != NULL; item = item->next) {
+            for (; item != NULL; item = item->next) {
                 insert_item(new_ht, item->key, item->value);
             }
         }
@@ -100,7 +97,6 @@ static void resize_hash_table(struct hash_table *ht){
 void insert_item(struct hash_table *ht, char *key, char *value){
     double lf = load_factor(ht);
     if(lf > 0.7){
-        //TODO FARE QUI RESIZE DELLA HASHTABLE
         resize_hash_table(ht);
     }
     struct ht_item *item = init_item(key, value);

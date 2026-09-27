@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "string_util.h"
+#include "xmalloc.h"
 
 size_t mia_strlen(const char *s){
 
@@ -15,7 +16,7 @@ size_t mia_strlen(const char *s){
 
 char *cp_string(char *s){
     size_t len = mia_strlen(s);
-    char *s_copy = malloc(len +1);
+    char *s_copy = xmalloc(len +1);
     memcpy(s_copy, s, len + 1 );
     return s_copy;
 

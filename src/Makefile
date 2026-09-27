@@ -4,7 +4,7 @@ CFLAGS := -std=c11 -Wall -Wextra -g
 # flag extra per la build di debug: sanitizer di memoria + undefined behavior
 SAN := -fsanitize=address,undefined -fno-omit-frame-pointer
 
-SRC := main.c hashtable.c string_util.c
+SRC := main.c hashtable.c string_util.c xmalloc.c
 OBJ := $(SRC:.c=.o)
 
 minidb: $(OBJ)
