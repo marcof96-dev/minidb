@@ -28,7 +28,16 @@ int get_capacity(struct hash_table *ht){
     return ht -> capacity;
 }
 
- 
+static struct ht_item *find_in_bucket(struct hash_table *ht, char* key, size_t index){
+    struct ht_item *item = ht -> item[index];
+    while(item){
+        if(my_str_are_equals(item -> key, key)) return item;
+        item = item -> next;
+    }
+    return item;
+}
+
+
 
 static size_t hash(char *str, size_t num_of_buckets){
     size_t hash = 5381;
@@ -95,21 +104,26 @@ static void resize_hash_table(struct hash_table *ht){
 }
 
 void insert_item(struct hash_table *ht, char *key, char *value){
-    double lf = load_factor(ht);
-    if(lf > 0.7){
-        resize_hash_table(ht);
-    }
-    struct ht_item *item = init_item(key, value);
-    size_t index = hash(item -> key, ht -> capacity);
+    size_t index = hash(key, ht -> capacity);
     printf("la chiave %s inserita nell'indice %zu \n",key, index);
-    struct ht_item *curr_item = ht -> item[index];
-    if(curr_item == NULL){
-        ht->item[index] = item;
+        
+    struct ht_item *item_checked = find_in_bucket(ht, key,index);
+    if(item_checked != NULL){
+        printf("Item con chiave %s trovato!\n",key);
+        free(item_checked -> value);
+        item_checked -> value = cp_string(value);
     }else{
+        double lf = load_factor(ht);
+        if(lf > 0.7){
+            resize_hash_table(ht);
+            index = hash(key, ht -> capacity); //Dopo il resize devo ricalcolare l'indice
+        }
+        struct ht_item *item = init_item(key, value);
+        printf("Item con chiave %s e valore %s aggiunto!\n",key,value);
         item -> next = ht->item[index];
-         ht->item[index] = item;
+        ht->item[index] = item;
+        ht -> counting ++;
     }
-    ht -> counting ++;
 
 }
 
@@ -150,18 +164,14 @@ void delete_item(struct hash_table *ht, char *key){
 }
 
 
+
+
 struct ht_item *get_item(struct hash_table *ht, char* key){
     size_t index = hash(key, ht -> capacity);
     printf("la chiave %s si trova nell'indice %zu \n",key, index);
-    struct ht_item *item = ht -> item[index];
-    while(item){
-        if(my_str_are_equals(item -> key, key)) return item;
-        item = item -> next;
-    }
-    return item;
+    return find_in_bucket(ht, key, index);
 
 }
-
 
 void free_chain(struct ht_item *item){
     struct ht_item *tmp = item;
