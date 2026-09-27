@@ -1,0 +1,6 @@
+*.o
+minidb
+minidb_debug
+.vscode
+*.swp
+*.dSYM/
