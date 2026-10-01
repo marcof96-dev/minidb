@@ -11,8 +11,8 @@ int main(void){
     insert_item(ht,"kfsdv", "tbmdfm");
     insert_item(ht,"yuiop", "cvbnm");
     printf("Counting: %d \n",get_counting(ht)); //Mi aspetto 6
-    struct ht_item *item = get_item(ht, "ciao");
-    printf("item trovato all'indirizzo %p \n",item);
+    // struct ht_item *item = get_value(ht, "ciao");
+    // printf("item trovato all'indirizzo %p \n",item);
     delete_item(ht,"ciao");
     printf("Counting: %d \n",get_counting(ht)); //Mi aspetto 5
     printf("Counting: %d, Capacity: %d, Load factor: %f \n",get_counting(ht), get_capacity(ht), load_factor(ht));

@@ -10,7 +10,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "hashtable.h"
+
 
 static int checks_run = 0;
 static int checks_failed = 0;
@@ -36,7 +38,7 @@ static char *key_n(char *buf, size_t len, int i) {
 static void test_empty_table(void) {
     struct hash_table *ht = init_ht();
     CHECK(get_counting(ht) == 0);
-    CHECK(get_item(ht, "nope") == NULL);
+    CHECK(get_value(ht, "nope") == NULL);
     free_ht(ht);
 }
 
@@ -45,9 +47,9 @@ static void test_insert_and_get(void) {
     insert_item(ht, "a", "1");
     insert_item(ht, "b", "2");
     CHECK(get_counting(ht) == 2);
-    CHECK(get_item(ht, "a") != NULL);
-    CHECK(get_item(ht, "b") != NULL);
-    CHECK(get_item(ht, "c") == NULL);
+    CHECK(get_value(ht, "a") != NULL);
+    CHECK(get_value(ht, "b") != NULL);
+    CHECK(get_value(ht, "c") == NULL);
     free_ht(ht);
 }
 
@@ -58,12 +60,13 @@ static void test_update_existing_key(void) {
     insert_item(ht, "a", "2");
     insert_item(ht, "a", "3");
     CHECK(get_counting(ht) == 1);
-    CHECK(get_item(ht, "a") != NULL);
+    CHECK(get_value(ht, "a") != NULL);
+    CHECK(strcmp(get_value(ht, "a"), "3") == 0);
 
     /* Dopo il delete non deve restare un duplicato nascosto. */
     delete_item(ht, "a");
     CHECK(get_counting(ht) == 0);
-    CHECK(get_item(ht, "a") == NULL);
+    CHECK(get_value(ht, "a") == NULL);
     free_ht(ht);
 }
 
@@ -78,7 +81,7 @@ static void test_key_inserted_during_resize(void) {
         insert_item(ht, key_n(buf, sizeof buf, i), "v");
         if (get_capacity(ht) != cap_before) {
             resizes++;
-            CHECK(get_item(ht, buf) != NULL);
+            CHECK(get_value(ht, buf) != NULL);
         }
     }
     CHECK(resizes > 0);   /* altrimenti il test non ha verificato niente */
@@ -97,7 +100,7 @@ static void test_many_inserts(void) {
     CHECK(load_factor(ht) <= 1.0);
     int missing = 0;
     for (int i = 0; i < N_KEYS; i++)
-        if (get_item(ht, key_n(buf, sizeof buf, i)) == NULL) missing++;
+        if (get_value(ht, key_n(buf, sizeof buf, i)) == NULL) missing++;
     CHECK(missing == 0);
     free_ht(ht);
 }
@@ -122,7 +125,7 @@ static void test_delete_missing_key(void) {
     insert_item(ht, "a", "1");
     delete_item(ht, "nope");              /* tabella non vuota */
     CHECK(get_counting(ht) == 1);
-    CHECK(get_item(ht, "a") != NULL);
+    CHECK(get_value(ht, "a") != NULL);
     free_ht(ht);
 }
 
@@ -137,7 +140,7 @@ static void test_delete_all_oldest_first(void) {
 
     for (int i = 0; i < N_KEYS; i++) {
         delete_item(ht, key_n(buf, sizeof buf, i));
-        CHECK(get_item(ht, buf) == NULL);
+        CHECK(get_value(ht, buf) == NULL);
     }
     CHECK(get_counting(ht) == 0);
     free_ht(ht);
@@ -155,7 +158,7 @@ static void test_delete_half(void) {
     CHECK(get_counting(ht) == N_KEYS / 2);
     int wrong = 0;
     for (int i = 0; i < N_KEYS; i++) {
-        int present = get_item(ht, key_n(buf, sizeof buf, i)) != NULL;
+        int present = get_value(ht, key_n(buf, sizeof buf, i)) != NULL;
         int should_be_present = (i % 2 == 1);
         if (present != should_be_present) wrong++;
     }
@@ -181,6 +184,7 @@ int main(void) {
     RUN(test_delete_missing_key);
     RUN(test_delete_all_oldest_first);
     RUN(test_delete_half);
+    
 
     fprintf(stderr, "\n%d controlli, %d falliti\n", checks_run, checks_failed);
     return checks_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

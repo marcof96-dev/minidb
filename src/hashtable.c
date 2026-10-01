@@ -48,7 +48,7 @@ static size_t hash(char *str, size_t num_of_buckets){
     return hash % num_of_buckets;
 }
 
-struct ht_item *init_item(char *key, char *value){
+static struct ht_item *init_item(char *key, char *value){
     struct ht_item  *item = xmalloc(sizeof(struct ht_item));
     item -> key = cp_string(key);//copio il valore della stringa per renderlo indipendente dal puntatore passato
     item -> value = cp_string(value);
@@ -159,21 +159,26 @@ void delete_item(struct hash_table *ht, char *key){
 
         tmp = tmp -> next;
     }
-
-    
 }
 
 
 
 
-struct ht_item *get_item(struct hash_table *ht, char* key){
+static struct ht_item *get_item(struct hash_table *ht, char* key){
     size_t index = hash(key, ht -> capacity);
     printf("la chiave %s si trova nell'indice %zu \n",key, index);
     return find_in_bucket(ht, key, index);
-
 }
 
-void free_chain(struct ht_item *item){
+const char *get_value(struct hash_table *ht, char* key){
+    struct ht_item *item = get_item(ht, key);
+    if(item){
+        return item -> value;
+    }
+    return NULL;
+}
+
+static void free_chain(struct ht_item *item){
     struct ht_item *tmp = item;
     while(tmp -> next != NULL){
         struct ht_item *tmp_next = tmp -> next;
