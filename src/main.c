@@ -4,7 +4,8 @@
 #include "string_util.h"
 
 
-#define BUF_SIZE 16 
+#define BUF_SIZE 1024 
+#define MAX_TOKENS 3
 
 int main(void){
    char buf[BUF_SIZE];
@@ -25,6 +26,10 @@ int main(void){
         continue;
      }
 
+     if(str_len == 1 && buf[0] == '\n'){
+        continue;
+     }
+
      if(buf[str_len - 1] != '\n' && !feof(stdin)){
         printf("Valore troppo grande! Non è possibile inserire più di %d caratteri \n", (BUF_SIZE - 2));//Metto il -2 perchè devo contare il /n e il /0
         int c;
@@ -37,6 +42,21 @@ int main(void){
      buf[strcspn(buf, "\n")] = 0; //Elimino il carattere di new line
      
      printf("%s\n",buf);
+     char *token[MAX_TOKENS];
+     size_t count = tokenize_string(buf, token, MAX_TOKENS);
+     if(count > MAX_TOKENS){
+        printf("Il massimo di token è %d, sono stati inseriti un numero di token superiore. \n",MAX_TOKENS);
+        continue;
+     }
+     printf("Token: ");
+     for(size_t i = 0; i<count; i++){
+        if(i == count - 1){
+            printf("[%s]",token[i]);
+        }else{
+            printf("[%s], ",token[i]);
+        }
+     }
+     printf("\n");
    }
    printf("\n");
 

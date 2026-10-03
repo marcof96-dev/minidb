@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hashtable.h"
+#include "string_util.h"
 
 
 static int checks_run = 0;
@@ -146,6 +147,76 @@ static void test_delete_all_oldest_first(void) {
     free_ht(ht);
 }
 
+static void test_tokenize_tabs(void) {
+    char buf[] = "SET\tnome\tmarco";     // array, non puntatore a stringa letterale:
+    char *tok[3];                         // strtok modifica il buffer
+    CHECK(tokenize_string(buf, tok, 3) == 3);
+    CHECK(strcmp(tok[1], "nome") == 0);
+    CHECK(strcmp(tok[2], "marco") == 0);
+}
+
+static void test_tokenize_empty_string(void) {
+    char buf[] = "";     
+    char *tok[3];                         
+    CHECK(tokenize_string(buf, tok, 3) == 0);
+}
+
+static void test_tokenize_one_word(void) {
+    char buf[] = "Ciao";     
+    char *tok[3];                         
+    CHECK(tokenize_string(buf, tok, 3) == 1);
+    CHECK(strcmp(tok[0], "Ciao") == 0);
+}
+
+static void test_tokenize_wrong_start_end_spaces(void) {
+    char buf[] = "        SET nome marco     ";     // array, non puntatore a stringa letterale:
+    char *tok[3];                         // strtok modifica il buffer
+    CHECK(tokenize_string(buf, tok, 3) == 3);
+    CHECK(strcmp(tok[0], "SET") == 0);
+    CHECK(strcmp(tok[2], "marco") == 0);
+}
+
+#define TOK_GUARD_SLOTS 2
+static char tok_guard;
+
+static void test_tokenize_write_out_of_bound(void) {
+    char buf[] = "a b c d e";                 /* 5 words, limit is 3 */
+    char *tok[3 + TOK_GUARD_SLOTS];           /* 2 extra slots absorb a bug safely */
+    for (size_t i = 0; i < 3 + TOK_GUARD_SLOTS; i++)
+        tok[i] = &tok_guard;
+
+    CHECK(tokenize_string(buf, tok, 3) == 5);
+    CHECK(strcmp(tok[0], "a") == 0);
+    CHECK(strcmp(tok[2], "c") == 0);
+    CHECK(tok[3] == &tok_guard);
+    CHECK(tok[4] == &tok_guard);
+}
+
+/* Boundary: exactly max_tokens words. */
+static void test_tokenize_exactly_max_tokens(void) {
+    char buf[] = "a b c";
+    char *tok[3 + TOK_GUARD_SLOTS];
+    for (size_t i = 0; i < 3 + TOK_GUARD_SLOTS; i++)
+        tok[i] = &tok_guard;
+
+    CHECK(tokenize_string(buf, tok, 3) == 3);
+    CHECK(strcmp(tok[2], "c") == 0);
+    CHECK(tok[3] == &tok_guard);
+    CHECK(tok[4] == &tok_guard);
+}
+
+/* max_tokens == 0: it must not write anything. */
+static void test_tokenize_zero_max_tokens(void) {
+    char buf[] = "a b c";
+    char *tok[TOK_GUARD_SLOTS];
+    for (size_t i = 0; i < TOK_GUARD_SLOTS; i++)
+        tok[i] = &tok_guard;
+
+    CHECK(tokenize_string(buf, tok, 0) == 3);
+    CHECK(tok[0] == &tok_guard);
+    CHECK(tok[1] == &tok_guard);
+}
+
 /* Cancellando meta' delle chiavi, l'altra meta' deve restare intatta. */
 static void test_delete_half(void) {
     struct hash_table *ht = init_ht();
@@ -184,7 +255,13 @@ int main(void) {
     RUN(test_delete_missing_key);
     RUN(test_delete_all_oldest_first);
     RUN(test_delete_half);
-    
+    RUN(test_tokenize_tabs);
+    RUN(test_tokenize_empty_string);
+    RUN(test_tokenize_one_word);
+    RUN(test_tokenize_wrong_start_end_spaces);
+    RUN(test_tokenize_write_out_of_bound);
+    RUN(test_tokenize_exactly_max_tokens);
+    RUN(test_tokenize_zero_max_tokens);
 
     fprintf(stderr, "\n%d controlli, %d falliti\n", checks_run, checks_failed);
     return checks_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

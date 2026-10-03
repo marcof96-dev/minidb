@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "string_util.h"
 #include "xmalloc.h"
+
+static const char *DELIMS = " \t\r\n";
+
 
 size_t mia_strlen(const char *s){
 
@@ -13,6 +17,24 @@ size_t mia_strlen(const char *s){
       }
     return len;
 }
+
+size_t tokenize_string(char buf[], char *tokens[], size_t max_tokens){
+        size_t count = 0;
+        char *tok = strtok(buf, DELIMS);
+        
+        while(tok != NULL && count < max_tokens){
+            tokens[count] = tok;
+            tok = strtok(NULL, DELIMS);
+            count ++;
+        }
+        while(tok){
+            tok = strtok(NULL, DELIMS);
+            count ++;
+        }
+        
+        return count;        
+}
+
 
 char *cp_string(char *s){
     size_t len = mia_strlen(s);
