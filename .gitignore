@@ -5,3 +5,4 @@ minidb_debug
 *.swp
 *.dSYM/
 test_minidb
+.DS_Store

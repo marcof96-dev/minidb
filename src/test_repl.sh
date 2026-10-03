@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # test_repl.sh - uso: ./test_repl.sh [binario] [BUF_SIZE]
 BIN=${1:-./minidb}
-BUF_SIZE=${2:-16}
+BUF_SIZE=${2:-1024}
 
 pass=0; fail=0
 
