@@ -1,21 +1,43 @@
 #include <stdio.h>
+#include <string.h>
 #include "hashtable.h"
+#include "string_util.h"
+
+
+#define BUF_SIZE 16 
 
 int main(void){
-    // struct ht_item *item = init_item("key", "value");
-    struct hash_table *ht = init_ht();
-    insert_item(ht,"key", "value");
-    insert_item(ht,"pippo", "pluto");
-    insert_item(ht,"pippo", "paperino");
-    insert_item(ht,"ciao", "mondo");
-    insert_item(ht,"kfsdv", "tbmdfm");
-    insert_item(ht,"yuiop", "cvbnm");
-    printf("Counting: %d \n",get_counting(ht)); //Mi aspetto 6
-    // struct ht_item *item = get_value(ht, "ciao");
-    // printf("item trovato all'indirizzo %p \n",item);
-    delete_item(ht,"ciao");
-    printf("Counting: %d \n",get_counting(ht)); //Mi aspetto 5
-    printf("Counting: %d, Capacity: %d, Load factor: %f \n",get_counting(ht), get_capacity(ht), load_factor(ht));
-    free_ht(ht);
-    printf("Compilazione eseguita123!\n");
+   char buf[BUF_SIZE];
+
+   while(1){
+    printf("> ");
+     fflush(stdout);
+     
+     //Controllo se è vuoto o è finita l'input
+     //fgets + strlen non gestiscono byte NUL nell'input: da rivedere con le stringhe binary-safe
+     if(fgets(buf, sizeof(buf),stdin) == NULL){
+        break;//Input finito
+     }
+
+     size_t str_len = mia_strlen(buf);
+     if(str_len == 0){
+        printf("Errore dovuto alla a lunghezza nulla della stringa \n");
+        continue;
+     }
+
+     if(buf[str_len - 1] != '\n' && !feof(stdin)){
+        printf("Valore troppo grande! Non è possibile inserire più di %d caratteri \n", (BUF_SIZE - 2));//Metto il -2 perchè devo contare il /n e il /0
+        int c;
+        do{
+            c = getchar();
+        }while(c !='\n' && c!=EOF);
+        continue;
+     }
+
+     buf[strcspn(buf, "\n")] = 0; //Elimino il carattere di new line
+     
+     printf("%s\n",buf);
+   }
+   printf("\n");
+
 }
