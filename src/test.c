@@ -120,12 +120,14 @@ static void test_many_updates(void) {
 
 static void test_delete_missing_key(void) {
     struct hash_table *ht = init_ht();
-    delete_item(ht, "nope");              /* tabella vuota */
+    int fail_delete = delete_item(ht, "nope");              /* tabella vuota */
+    CHECK(fail_delete == 0);
     CHECK(get_counting(ht) == 0);
 
     insert_item(ht, "a", "1");
-    delete_item(ht, "nope");              /* tabella non vuota */
-    CHECK(get_counting(ht) == 1);
+    fail_delete = delete_item(ht, "nope");              /* tabella non vuota */
+    CHECK(fail_delete == 0);
+    CHECK(get_counting(ht) == 1);                       /* la tabella non cambia */
     CHECK(get_value(ht, "a") != NULL);
     free_ht(ht);
 }
@@ -140,8 +142,8 @@ static void test_delete_all_oldest_first(void) {
         insert_item(ht, key_n(buf, sizeof buf, i), "v");
 
     for (int i = 0; i < N_KEYS; i++) {
-        delete_item(ht, key_n(buf, sizeof buf, i));
-        CHECK(get_value(ht, buf) == NULL);
+        CHECK(delete_item(ht, key_n(buf, sizeof buf, i)) == 1);
+        CHECK(get_value(ht, buf) == NULL);          /* sparita davvero */
     }
     CHECK(get_counting(ht) == 0);
     free_ht(ht);
@@ -237,6 +239,33 @@ static void test_delete_half(void) {
     free_ht(ht);
 }
 
+static void test_delete_present_key(void) {
+    struct hash_table *ht = init_ht();
+    
+    insert_item(ht, "pippo", "v");
+    insert_item(ht, "pluto", "c");
+    insert_item(ht, "paperino", "q");
+    
+
+    CHECK(delete_item(ht,"pluto") == 1);
+    free_ht(ht);
+}
+
+static void test_delete_twice_same_key(void) {
+    struct hash_table *ht = init_ht();
+    
+    insert_item(ht, "pippo", "v");
+    insert_item(ht, "pluto", "c");
+    insert_item(ht, "paperino", "q");
+    
+
+    CHECK(delete_item(ht,"pluto") == 1);
+    CHECK(delete_item(ht,"pluto") == 0);
+    CHECK(get_value(ht, "pluto") == NULL);
+    CHECK(get_counting(ht) == 2);                /* le altre due restano */
+    free_ht(ht);
+}
+
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
 #define RUN(test) do {                                                    \
     int failed_before = checks_failed;                                    \
@@ -246,6 +275,7 @@ static void test_delete_half(void) {
 } while (0)
 
 int main(void) {
+    //TEST HASH_TABLE
     RUN(test_empty_table);
     RUN(test_insert_and_get);
     RUN(test_update_existing_key);
@@ -255,6 +285,9 @@ int main(void) {
     RUN(test_delete_missing_key);
     RUN(test_delete_all_oldest_first);
     RUN(test_delete_half);
+    RUN(test_delete_present_key);
+    RUN(test_delete_twice_same_key);
+    //TEST TOKENIZER
     RUN(test_tokenize_tabs);
     RUN(test_tokenize_empty_string);
     RUN(test_tokenize_one_word);

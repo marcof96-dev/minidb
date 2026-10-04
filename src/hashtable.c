@@ -6,6 +6,7 @@
 #include "xmalloc.h"
 
 
+
 struct ht_item{
     char *key;
     char *value;
@@ -130,38 +131,36 @@ void insert_item(struct hash_table *ht, char *key, char *value){
 
 }
 
-void delete_item(struct hash_table *ht, char *key){
+
+int delete_item(struct hash_table *ht, char *key){
     size_t index = hash(key, ht -> capacity);
-    struct ht_item *item = ht -> item[index];
-    struct ht_item *tmp = item;
+    struct ht_item *tmp =  ht->item[index];
     if(tmp == NULL){
-        return;
+        return 0;
     }
-    printf("key =  %s\n", tmp -> key);
     if (my_str_are_equals(tmp->key, key)) {
-        ht->item[index] = tmp->next;   // stacca dal bucket PRIMA
+        ht->item[index] = tmp->next;   //  unlink from the bucket first
         free(tmp->key);
         free(tmp->value);
         free(tmp);
         ht -> counting --;
-        return;
+        return 1;
     }
 
     while(tmp -> next){
-         printf("key =  %s", tmp -> next -> key);
         if(my_str_are_equals(tmp -> next -> key, key)){
-            printf("trovata stringa uguale! %s, %s", tmp -> next -> key, key);
             struct ht_item *target = tmp->next;
-            tmp->next = target->next;      // stacca
+            tmp->next = target->next;      // unlink.
             free(target->key);
             free(target->value);
             free(target);
             ht -> counting --;
-            break;
+            return 1;
         }
 
         tmp = tmp -> next;
     }
+    return 0;
 }
 
 
