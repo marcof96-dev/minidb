@@ -59,12 +59,12 @@ static struct ht_item *init_item(char *key, char *value){
 //Initializing hash_table struct. Setting a fixed size in start phase of the  project
 struct hash_table *init_ht(void){
     struct hash_table *ht = xmalloc(sizeof(struct hash_table));
-    ht -> capacity = 5; //100 per ora è un placeholder
+    ht -> capacity = 5; // 5 is a placeholder for now
     ht -> item = xcalloc(ht -> capacity,sizeof(struct ht_item*));
     ht -> counting = 0;
     return ht;
 }
-
+/* Returns the load factor of the hash table. */
 double load_factor(struct hash_table *ht){
     double lf;
     lf = (double) ht->counting / ht -> capacity;
@@ -72,11 +72,14 @@ double load_factor(struct hash_table *ht){
 
 }
 
-
+/* Resizes the hash table by doubling its capacity. It is called when the
+ * load factor exceeds 0.7. Every item is reinserted into a new, larger table,
+ * so its index is recomputed with the hash function. Once all items are
+ * reinserted, the auxiliary table is freed. */
 static void resize_hash_table(struct hash_table *ht){
     printf("Facendo il resize...");
     struct hash_table *new_ht = xmalloc(sizeof(struct hash_table));
-    new_ht -> capacity = 2*ht->capacity; //100 per ora è un placeholder
+    new_ht -> capacity = 2*ht->capacity; 
     new_ht -> item = xcalloc(new_ht -> capacity,sizeof(struct ht_item*));
     new_ht -> counting = 0;
     for(int i = 0; i<ht -> capacity; i++){
@@ -178,6 +181,9 @@ const char *get_value(struct hash_table *ht, char* key){
     return NULL;
 }
 
+/* Frees the entire linked list stored in a slot of the hash table.
+ * Takes the first item of the list and frees every item in the chain:
+ * first its key and value, then the item itself. */
 static void free_chain(struct ht_item *item){
     struct ht_item *tmp = item;
     while(tmp -> next != NULL){
@@ -192,6 +198,8 @@ static void free_chain(struct ht_item *item){
     free(tmp);
 }
 
+/* Frees the entire hash table: walks every bucket and frees its linked list,
+ * then frees the bucket array and the table itself. */
 void free_ht(struct hash_table *ht){
     for(int i = 0; i < ht -> capacity; i++){
         struct ht_item *item = ht -> item[i];

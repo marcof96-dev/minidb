@@ -14,8 +14,8 @@ int main(void){
     printf("> ");
      fflush(stdout);
      
-     //Controllo se è vuoto o è finita l'input
-     //fgets + strlen non gestiscono byte NUL nell'input: da rivedere con le stringhe binary-safe
+     // Stop when the input ends (EOF, e.g. Ctrl-D).
+     // fgets + strlen can't handle NUL bytes in the input: to be rewritten with binary-safe strings.
      if(fgets(buf, sizeof(buf),stdin) == NULL){
         break;//Input finito
      }
@@ -39,8 +39,7 @@ int main(void){
         continue;
      }
 
-     buf[strcspn(buf, "\n")] = 0; //Elimino il carattere di new line
-     
+     buf[strcspn(buf, "\n")] = 0; // Remove the trailing newline
      printf("%s\n",buf);
      char *token[MAX_TOKENS];
      size_t count = tokenize_string(buf, token, MAX_TOKENS);
