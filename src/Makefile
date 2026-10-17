@@ -4,11 +4,11 @@ CFLAGS := -std=c11 -Wall -Wextra -g
 # flag extra per la build di debug: sanitizer di memoria + undefined behavior
 SAN := -fsanitize=address,undefined -fno-omit-frame-pointer
 
-SRC := main.c hashtable.c string_util.c xmalloc.c
+SRC := main.c hashtable.c string_util.c xmalloc.c command.c
 OBJ := $(SRC:.c=.o)
 
 # i test hanno un loro main(), quindi usano la libreria senza main.c
-LIB_SRC := hashtable.c string_util.c xmalloc.c
+LIB_SRC := hashtable.c string_util.c xmalloc.c command.c
 TEST_SRC := test.c $(LIB_SRC)
 
 minidb: $(OBJ)

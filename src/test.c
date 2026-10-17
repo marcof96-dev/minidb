@@ -13,6 +13,7 @@
 #include <string.h>
 #include "hashtable.h"
 #include "string_util.h"
+#include "command.h"
 
 
 static int checks_run = 0;
@@ -35,6 +36,50 @@ static char *key_n(char *buf, size_t len, int i) {
     snprintf(buf, len, "k%d", i);
     return buf;
 }
+
+
+static void test_no_case_equal_string(void){
+    char *a = "SET";
+    char *b = "set";
+    CHECK(my_str_are_equals_nocase(a,b) == 1);
+    CHECK(my_str_are_equals_nocase(b,a) == 1);
+}
+
+static void test_no_case_diff_string(void){
+    char *a = "SET";
+    char *b = "pippo";
+    CHECK(my_str_are_equals_nocase(a,b) == 0);
+    CHECK(my_str_are_equals_nocase(b,a) == 0);
+}
+
+static void test_no_case_empty_string(void){
+    char *a = "";
+    char *b = "pippo";
+    CHECK(my_str_are_equals_nocase(a,b) == 0);
+    CHECK(my_str_are_equals_nocase(b,a) == 0);
+}
+
+static void test_no_case_different_length_string(void){
+    char *a = "Set";
+    char *b = "Sette";
+    CHECK(my_str_are_equals_nocase(a,b) == 0);
+    CHECK(my_str_are_equals_nocase(b,a) == 0);
+}
+
+static void test_no_case_different_case_string(void){
+    char *a = "Set";
+    char *b = "sEt";
+    CHECK(my_str_are_equals_nocase(a,b) == 1);
+    CHECK(my_str_are_equals_nocase(b,a) == 1);
+}
+
+static void test_no_case_all_empty_string(void){
+    char *a = "";
+    char *b = "";
+    CHECK(my_str_are_equals_nocase(a,b) == 1);
+    CHECK(my_str_are_equals_nocase(b,a) == 1);
+}
+
 
 static void test_empty_table(void) {
     struct hash_table *ht = init_ht();
@@ -266,6 +311,104 @@ static void test_delete_twice_same_key(void) {
     free_ht(ht);
 }
 
+static void test_set_ok(void){
+    struct hash_table *ht = init_ht();
+    char *token[3];
+    token[0] = "SET";
+    token[1] = "foo";
+    token[2] = "bar";
+    const char *outcome = execute(ht, token, 3);
+    CHECK(outcome != NULL);
+    CHECK(get_value(ht, "foo") != NULL);
+    CHECK(strcmp(outcome, "OK") == 0);
+    free_ht(ht);
+}
+
+static void test_get_ok(void){
+    struct hash_table *ht = init_ht();
+    char *token[3];
+    token[0] = "SET";
+    token[1] = "foo";
+    token[2] = "bar";
+    const char *outcome = execute(ht, token, 3);
+    CHECK(outcome != NULL);
+    char *token_get[2];
+    token_get[0] = "GET";
+    token_get[1] = "foo";
+    const char *get_outcome = execute(ht, token_get,2);
+    CHECK(get_outcome != NULL);
+    CHECK(strcmp(get_outcome, "bar") == 0);
+    
+    free_ht(ht);
+}
+
+static void test_get_ko(void){
+    struct hash_table *ht = init_ht();
+    char *token[3];
+    token[0] = "SET";
+    token[1] = "foo";
+    token[2] = "bar";
+    const char *outcome = execute(ht, token, 3);
+    CHECK(outcome != NULL);
+    char *token_get[2];
+    token_get[0] = "GET";
+    token_get[1] = "pippo";
+    const char *get_outcome = execute(ht, token_get,2);
+    CHECK(get_outcome != NULL);
+    CHECK(strcmp(get_outcome, "(nil)") == 0);
+    
+    free_ht(ht);
+}
+
+static void test_delete(void){
+    struct hash_table *ht = init_ht();
+    char *token[3];
+    token[0] = "SET";
+    token[1] = "foo";
+    token[2] = "bar";
+    const char *outcome = execute(ht, token, 3);
+    CHECK(outcome != NULL);
+    char *token_del[2];
+    token_del[0] = "DEL";
+    token_del[1] = "foo";
+    const char *del_outcome = execute(ht, token_del,2);
+    CHECK(del_outcome != NULL);
+    CHECK(strcmp(del_outcome, "(1)") == 0);
+    del_outcome = execute(ht, token_del,2);
+    CHECK(del_outcome != NULL);
+    CHECK(strcmp(del_outcome, "(0)") == 0);    
+    
+    free_ht(ht);
+}
+
+static void test_set_twice(void){
+    struct hash_table *ht = init_ht();
+    char *token[3];
+    token[0] = "SET";
+    token[1] = "foo";
+    token[2] = "bar";
+    const char *outcome = execute(ht, token, 3);  
+    CHECK(outcome != NULL);
+    CHECK(strcmp(outcome, "OK") == 0);
+    token[0] = "SET";
+    token[1] = "foo";
+    token[2] = "pippo";
+    outcome = execute(ht, token, 3);
+    CHECK(outcome != NULL);
+    CHECK(strcmp(outcome, "OK") == 0);
+    char *token_get[2];
+    token_get[0] = "GET";
+    token_get[1] = "foo";
+    const char *get_outcome = execute(ht, token_get,2);
+    CHECK(get_outcome != NULL);
+    CHECK(strcmp(get_outcome, "pippo") == 0);
+    CHECK(get_counting(ht) == 1);
+    free_ht(ht);
+
+}
+
+
+
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
 #define RUN(test) do {                                                    \
     int failed_before = checks_failed;                                    \
@@ -275,6 +418,13 @@ static void test_delete_twice_same_key(void) {
 } while (0)
 
 int main(void) {
+    //TEST STRING
+    RUN(test_no_case_equal_string);
+    RUN(test_no_case_empty_string);
+    RUN(test_no_case_diff_string);
+    RUN(test_no_case_different_length_string);
+    RUN(test_no_case_different_case_string);
+    RUN(test_no_case_all_empty_string);
     //TEST HASH_TABLE
     RUN(test_empty_table);
     RUN(test_insert_and_get);
@@ -287,6 +437,7 @@ int main(void) {
     RUN(test_delete_half);
     RUN(test_delete_present_key);
     RUN(test_delete_twice_same_key);
+    //TODO insert here test on command.c error.
     //TEST TOKENIZER
     RUN(test_tokenize_tabs);
     RUN(test_tokenize_empty_string);
@@ -295,6 +446,13 @@ int main(void) {
     RUN(test_tokenize_write_out_of_bound);
     RUN(test_tokenize_exactly_max_tokens);
     RUN(test_tokenize_zero_max_tokens);
+    //TEST EXECUTE
+    RUN(test_set_ok);
+    RUN(test_get_ok);
+    RUN(test_get_ko);
+    RUN(test_delete);
+    RUN(test_set_twice);
+
 
     fprintf(stderr, "\n%d controlli, %d falliti\n", checks_run, checks_failed);
     return checks_failed == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

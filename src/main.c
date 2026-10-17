@@ -2,6 +2,7 @@
 #include <string.h>
 #include "hashtable.h"
 #include "string_util.h"
+#include "command.h"
 
 
 #define BUF_SIZE 1024 
@@ -9,7 +10,7 @@
 
 int main(void){
    char buf[BUF_SIZE];
-
+   struct hash_table *ht = init_ht();
    while(1){
     printf("> ");
      fflush(stdout);
@@ -40,23 +41,20 @@ int main(void){
      }
 
      buf[strcspn(buf, "\n")] = 0; // Remove the trailing newline
-     printf("%s\n",buf);
      char *token[MAX_TOKENS];
      size_t count = tokenize_string(buf, token, MAX_TOKENS);
+     if(count == 0){
+      continue;
+     }
      if(count > MAX_TOKENS){
         printf("Il massimo di token è %d, sono stati inseriti un numero di token superiore. \n",MAX_TOKENS);
         continue;
      }
-     printf("Token: ");
-     for(size_t i = 0; i<count; i++){
-        if(i == count - 1){
-            printf("[%s]",token[i]);
-        }else{
-            printf("[%s], ",token[i]);
-        }
-     }
-     printf("\n");
+     
+     const char *outcome = execute(ht,token,count);
+     printf("%s\n", outcome);
    }
    printf("\n");
+   free_ht(ht);
 
 }

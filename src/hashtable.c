@@ -78,7 +78,6 @@ double load_factor(struct hash_table *ht){
  * so its index is recomputed with the hash function. Once all items are
  * reinserted, the auxiliary table is freed. */
 static void resize_hash_table(struct hash_table *ht){
-    printf("Facendo il resize...");
     struct hash_table *new_ht = xmalloc(sizeof(struct hash_table));
     new_ht -> capacity = 2*ht->capacity; 
     new_ht -> item = xcalloc(new_ht -> capacity,sizeof(struct ht_item*));
@@ -109,11 +108,9 @@ static void resize_hash_table(struct hash_table *ht){
 
 void insert_item(struct hash_table *ht, char *key, char *value){
     size_t index = hash(key, ht -> capacity);
-    printf("la chiave %s inserita nell'indice %zu \n",key, index);
         
     struct ht_item *item_checked = find_in_bucket(ht, key,index);
     if(item_checked != NULL){
-        printf("Item con chiave %s trovato!\n",key);
         free(item_checked -> value);
         item_checked -> value = cp_string(value);
     }else{
@@ -123,7 +120,6 @@ void insert_item(struct hash_table *ht, char *key, char *value){
             index = hash(key, ht -> capacity); //Dopo il resize devo ricalcolare l'indice
         }
         struct ht_item *item = init_item(key, value);
-        printf("Item con chiave %s e valore %s aggiunto!\n",key,value);
         item -> next = ht->item[index];
         ht->item[index] = item;
         ht -> counting ++;
@@ -168,7 +164,6 @@ int delete_item(struct hash_table *ht, char *key){
 
 static struct ht_item *get_item(struct hash_table *ht, char* key){
     size_t index = hash(key, ht -> capacity);
-    printf("la chiave %s si trova nell'indice %zu \n",key, index);
     return find_in_bucket(ht, key, index);
 }
 
