@@ -407,6 +407,78 @@ static void test_set_twice(void){
 
 }
 
+/* Le risposte d'errore iniziano tutte con "Error": i test controllano solo
+ * il prefisso, cosi' il testo del messaggio si puo' cambiare liberamente. */
+static int is_error(const char *reply) {
+    return reply != NULL && strncmp(reply, "Error", 5) == 0;
+}
+
+/* count == 0: execute non deve leggere tokens[0]. Lo slot e' NULL apposta,
+ * se execute lo usasse il test andrebbe in crash. */
+static void test_execute_zero_tokens(void) {
+    struct hash_table *ht = init_ht();
+    char *tok[1] = { NULL };
+    CHECK(is_error(execute(ht, tok, 0)));
+    free_ht(ht);
+}
+
+static void test_execute_unknown_command(void) {
+    struct hash_table *ht = init_ht();
+    char *tok[] = { "PIPPO", "a" };
+    CHECK(is_error(execute(ht, tok, 2)));
+
+    /* un prefisso di un comando valido non e' un comando valido */
+    char *tok_prefix[] = { "SE", "a", "1" };
+    CHECK(is_error(execute(ht, tok_prefix, 3)));
+    CHECK(get_counting(ht) == 0);
+    free_ht(ht);
+}
+
+static void test_execute_wrong_number_of_args(void) {
+    struct hash_table *ht = init_ht();
+    char *get_none[] = { "GET" };
+    char *get_two[]  = { "GET", "a", "b" };
+    char *del_none[] = { "DEL" };
+    char *set_key[]  = { "SET", "a" };
+    CHECK(is_error(execute(ht, get_none, 1)));
+    CHECK(is_error(execute(ht, get_two, 3)));
+    CHECK(is_error(execute(ht, del_none, 1)));
+    CHECK(is_error(execute(ht, set_key, 2)));
+    CHECK(get_counting(ht) == 0);              /* SET a non deve inserire niente */
+    CHECK(get_value(ht, "a") == NULL);
+    free_ht(ht);
+}
+
+/* Il nome del comando e' case insensitive. */
+static void test_execute_command_case_insensitive(void) {
+    struct hash_table *ht = init_ht();
+    char *set_lower[] = { "set", "a", "1" };
+    char *get_mixed[] = { "GeT", "a" };
+    char *del_lower[] = { "del", "a" };
+    const char *reply = execute(ht, set_lower, 3);
+    CHECK(reply != NULL && strcmp(reply, "OK") == 0);
+    reply = execute(ht, get_mixed, 2);
+    CHECK(reply != NULL && strcmp(reply, "1") == 0);
+    reply = execute(ht, del_lower, 2);
+    CHECK(reply != NULL && strcmp(reply, "(1)") == 0);
+    CHECK(get_counting(ht) == 0);
+    free_ht(ht);
+}
+
+/* Chiave e valore invece mantengono le maiuscole: solo il comando le ignora. */
+static void test_execute_key_and_value_keep_case(void) {
+    struct hash_table *ht = init_ht();
+    char *set[]       = { "SET", "Nome", "Pippo" };
+    char *get_same[]  = { "GET", "Nome" };
+    char *get_lower[] = { "GET", "nome" };
+    execute(ht, set, 3);
+    const char *reply = execute(ht, get_same, 2);
+    CHECK(reply != NULL && strcmp(reply, "Pippo") == 0);
+    reply = execute(ht, get_lower, 2);
+    CHECK(reply != NULL && strcmp(reply, "(nil)") == 0);
+    free_ht(ht);
+}
+
 
 
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
@@ -437,7 +509,6 @@ int main(void) {
     RUN(test_delete_half);
     RUN(test_delete_present_key);
     RUN(test_delete_twice_same_key);
-    //TODO insert here test on command.c error.
     //TEST TOKENIZER
     RUN(test_tokenize_tabs);
     RUN(test_tokenize_empty_string);
@@ -452,6 +523,11 @@ int main(void) {
     RUN(test_get_ko);
     RUN(test_delete);
     RUN(test_set_twice);
+    RUN(test_execute_zero_tokens);
+    RUN(test_execute_unknown_command);
+    RUN(test_execute_wrong_number_of_args);
+    RUN(test_execute_command_case_insensitive);
+    RUN(test_execute_key_and_value_keep_case);
 
 
     fprintf(stderr, "\n%d controlli, %d falliti\n", checks_run, checks_failed);
