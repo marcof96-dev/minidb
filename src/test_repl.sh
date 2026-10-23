@@ -118,7 +118,7 @@ check "argomenti sbagliati: niente inserito" 0 "(nil)" ""
 
 # 19. Troppi token: errore del REPL, il comando non viene eseguito
 out=$(printf 'SET a b c\nGET a\n' | t "$BIN" 2>&1); code=$?
-check "troppi token" 0 "massimo di token" "OK"
+check "troppi token" 0 "Too many tokens" "OK"
 
 # 20. Riga di soli spazi: viene saltata senza errori
 out=$(printf '   \t  \n' | t "$BIN" 2>&1); code=$?

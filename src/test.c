@@ -479,6 +479,52 @@ static void test_execute_key_and_value_keep_case(void) {
     free_ht(ht);
 }
 
+/* I buffer sono array e non puntatori a stringhe letterali:
+ * execute_line li modifica (strtok ci scrive dentro i '\0'). */
+static void test_execute_line_normal(void) {
+    struct hash_table *ht = init_ht();
+    char set[] = "  SET   a\t1  ";          /* spazi e tab vanno ignorati */
+    char get[] = "get a";
+    const char *reply = execute_line(ht, set);
+    CHECK(reply != NULL && strcmp(reply, "OK") == 0);
+    reply = execute_line(ht, get);
+    CHECK(reply != NULL && strcmp(reply, "1") == 0);
+    CHECK(get_counting(ht) == 1);
+    free_ht(ht);
+}
+
+/* Riga vuota o di soli spazi: NULL, cosi' il REPL la salta in silenzio. */
+static void test_execute_line_no_tokens(void) {
+    struct hash_table *ht = init_ht();
+    char empty[]  = "";
+    char spaces[] = "   \t  ";
+    CHECK(execute_line(ht, empty) == NULL);
+    CHECK(execute_line(ht, spaces) == NULL);
+    CHECK(get_counting(ht) == 0);
+    free_ht(ht);
+}
+
+/* Troppi token: errore, e il comando non deve essere eseguito. */
+static void test_execute_line_too_many_tokens(void) {
+    struct hash_table *ht = init_ht();
+    char line[] = "SET a b c";
+    CHECK(is_error(execute_line(ht, line)));
+    CHECK(get_counting(ht) == 0);
+    CHECK(get_value(ht, "a") == NULL);
+    free_ht(ht);
+}
+
+/* Gli errori di execute arrivano fino a chi chiama execute_line. */
+static void test_execute_line_forwards_errors(void) {
+    struct hash_table *ht = init_ht();
+    char unknown[]  = "PIPPO a";
+    char wrong[]    = "SET a";
+    CHECK(is_error(execute_line(ht, unknown)));
+    CHECK(is_error(execute_line(ht, wrong)));
+    CHECK(get_counting(ht) == 0);
+    free_ht(ht);
+}
+
 
 
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
@@ -528,6 +574,11 @@ int main(void) {
     RUN(test_execute_wrong_number_of_args);
     RUN(test_execute_command_case_insensitive);
     RUN(test_execute_key_and_value_keep_case);
+    //TEST EXECUTE_LINE
+    RUN(test_execute_line_normal);
+    RUN(test_execute_line_no_tokens);
+    RUN(test_execute_line_too_many_tokens);
+    RUN(test_execute_line_forwards_errors);
 
 
     fprintf(stderr, "\n%d controlli, %d falliti\n", checks_run, checks_failed);

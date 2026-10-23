@@ -3,6 +3,10 @@
 #include "hashtable.h"
 #include "string_util.h"
 
+
+
+#define MAX_TOKENS 3
+
 typedef enum {
     CMD_GET,
     CMD_SET,
@@ -45,12 +49,24 @@ static int validate_token_size(const struct command *cmd, size_t count){
     return 0;
 }
 
+const char *execute_line(struct hash_table *ht,char buf[]){
+    char *tokens[MAX_TOKENS];
+    size_t count = tokenize_string(buf, tokens, MAX_TOKENS);
+    if(count == 0){
+        return NULL;
+     }
+    if(count > MAX_TOKENS){
+        return "Error: Too many tokens!";
+    }
+    return execute(ht, tokens, count);
+}
 
 const char *execute(struct hash_table *ht, char * tokens[], size_t count){
     if(count == 0){
         return "Error: zero token passed!";
-    } 
+    }
     const struct command *command = get_command(tokens[0]);
+
     if(command == NULL){
         return "Error: unknown command";
     }

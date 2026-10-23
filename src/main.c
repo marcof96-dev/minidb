@@ -6,7 +6,7 @@
 
 
 #define BUF_SIZE 1024 
-#define MAX_TOKENS 3
+
 
 int main(void){
    char buf[BUF_SIZE];
@@ -41,17 +41,11 @@ int main(void){
      }
 
      buf[strcspn(buf, "\n")] = 0; // Remove the trailing newline
-     char *token[MAX_TOKENS];
-     size_t count = tokenize_string(buf, token, MAX_TOKENS);
-     if(count == 0){
+     
+     const char *outcome = execute_line(ht,buf);
+     if(outcome == NULL){
       continue;
      }
-     if(count > MAX_TOKENS){
-        printf("Il massimo di token è %d, sono stati inseriti un numero di token superiore. \n",MAX_TOKENS);
-        continue;
-     }
-     
-     const char *outcome = execute(ht,token,count);
      printf("%s\n", outcome);
    }
    printf("\n");
