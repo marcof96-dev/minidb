@@ -1,4 +1,5 @@
 #include<stddef.h>
+#include <stdio.h>
 #include "command.h"
 #include "hashtable.h"
 #include "string_util.h"
@@ -49,7 +50,7 @@ static int validate_token_size(const struct command *cmd, size_t count){
     return 0;
 }
 
-const char *execute_line(struct hash_table *ht,char buf[]){
+const char *execute_line(FILE *aof,struct hash_table *ht,char buf[]){
     char *tokens[MAX_TOKENS];
     size_t count = tokenize_string(buf, tokens, MAX_TOKENS);
     if(count == 0){
@@ -58,10 +59,10 @@ const char *execute_line(struct hash_table *ht,char buf[]){
     if(count > MAX_TOKENS){
         return "Error: Too many tokens!";
     }
-    return execute(ht, tokens, count);
+    return execute(NULL,ht, tokens, count);
 }
 
-const char *execute(struct hash_table *ht, char * tokens[], size_t count){
+const char *execute(FILE *aof,struct hash_table *ht, char * tokens[], size_t count){
     if(count == 0){
         return "Error: zero token passed!";
     }

@@ -317,7 +317,7 @@ static void test_set_ok(void){
     token[0] = "SET";
     token[1] = "foo";
     token[2] = "bar";
-    const char *outcome = execute(ht, token, 3);
+    const char *outcome = execute(NULL,ht, token, 3);
     CHECK(outcome != NULL);
     CHECK(get_value(ht, "foo") != NULL);
     CHECK(strcmp(outcome, "OK") == 0);
@@ -330,12 +330,12 @@ static void test_get_ok(void){
     token[0] = "SET";
     token[1] = "foo";
     token[2] = "bar";
-    const char *outcome = execute(ht, token, 3);
+    const char *outcome = execute(NULL,ht, token, 3);
     CHECK(outcome != NULL);
     char *token_get[2];
     token_get[0] = "GET";
     token_get[1] = "foo";
-    const char *get_outcome = execute(ht, token_get,2);
+    const char *get_outcome = execute(NULL,ht, token_get,2);
     CHECK(get_outcome != NULL);
     CHECK(strcmp(get_outcome, "bar") == 0);
     
@@ -348,12 +348,12 @@ static void test_get_ko(void){
     token[0] = "SET";
     token[1] = "foo";
     token[2] = "bar";
-    const char *outcome = execute(ht, token, 3);
+    const char *outcome = execute(NULL,ht, token, 3);
     CHECK(outcome != NULL);
     char *token_get[2];
     token_get[0] = "GET";
     token_get[1] = "pippo";
-    const char *get_outcome = execute(ht, token_get,2);
+    const char *get_outcome = execute(NULL,ht, token_get,2);
     CHECK(get_outcome != NULL);
     CHECK(strcmp(get_outcome, "(nil)") == 0);
     
@@ -366,15 +366,15 @@ static void test_delete(void){
     token[0] = "SET";
     token[1] = "foo";
     token[2] = "bar";
-    const char *outcome = execute(ht, token, 3);
+    const char *outcome = execute(NULL,ht, token, 3);
     CHECK(outcome != NULL);
     char *token_del[2];
     token_del[0] = "DEL";
     token_del[1] = "foo";
-    const char *del_outcome = execute(ht, token_del,2);
+    const char *del_outcome = execute(NULL,ht, token_del,2);
     CHECK(del_outcome != NULL);
     CHECK(strcmp(del_outcome, "(1)") == 0);
-    del_outcome = execute(ht, token_del,2);
+    del_outcome = execute(NULL,ht, token_del,2);
     CHECK(del_outcome != NULL);
     CHECK(strcmp(del_outcome, "(0)") == 0);    
     
@@ -387,19 +387,19 @@ static void test_set_twice(void){
     token[0] = "SET";
     token[1] = "foo";
     token[2] = "bar";
-    const char *outcome = execute(ht, token, 3);  
+    const char *outcome = execute(NULL,ht, token, 3);  
     CHECK(outcome != NULL);
     CHECK(strcmp(outcome, "OK") == 0);
     token[0] = "SET";
     token[1] = "foo";
     token[2] = "pippo";
-    outcome = execute(ht, token, 3);
+    outcome = execute(NULL,ht, token, 3);
     CHECK(outcome != NULL);
     CHECK(strcmp(outcome, "OK") == 0);
     char *token_get[2];
     token_get[0] = "GET";
     token_get[1] = "foo";
-    const char *get_outcome = execute(ht, token_get,2);
+    const char *get_outcome = execute(NULL,ht, token_get,2);
     CHECK(get_outcome != NULL);
     CHECK(strcmp(get_outcome, "pippo") == 0);
     CHECK(get_counting(ht) == 1);
@@ -418,18 +418,18 @@ static int is_error(const char *reply) {
 static void test_execute_zero_tokens(void) {
     struct hash_table *ht = init_ht();
     char *tok[1] = { NULL };
-    CHECK(is_error(execute(ht, tok, 0)));
+    CHECK(is_error(execute(NULL,ht, tok, 0)));
     free_ht(ht);
 }
 
 static void test_execute_unknown_command(void) {
     struct hash_table *ht = init_ht();
     char *tok[] = { "PIPPO", "a" };
-    CHECK(is_error(execute(ht, tok, 2)));
+    CHECK(is_error(execute(NULL,ht, tok, 2)));
 
     /* un prefisso di un comando valido non e' un comando valido */
     char *tok_prefix[] = { "SE", "a", "1" };
-    CHECK(is_error(execute(ht, tok_prefix, 3)));
+    CHECK(is_error(execute(NULL,ht, tok_prefix, 3)));
     CHECK(get_counting(ht) == 0);
     free_ht(ht);
 }
@@ -440,10 +440,10 @@ static void test_execute_wrong_number_of_args(void) {
     char *get_two[]  = { "GET", "a", "b" };
     char *del_none[] = { "DEL" };
     char *set_key[]  = { "SET", "a" };
-    CHECK(is_error(execute(ht, get_none, 1)));
-    CHECK(is_error(execute(ht, get_two, 3)));
-    CHECK(is_error(execute(ht, del_none, 1)));
-    CHECK(is_error(execute(ht, set_key, 2)));
+    CHECK(is_error(execute(NULL,ht, get_none, 1)));
+    CHECK(is_error(execute(NULL,ht, get_two, 3)));
+    CHECK(is_error(execute(NULL,ht, del_none, 1)));
+    CHECK(is_error(execute(NULL,ht, set_key, 2)));
     CHECK(get_counting(ht) == 0);              /* SET a non deve inserire niente */
     CHECK(get_value(ht, "a") == NULL);
     free_ht(ht);
@@ -455,11 +455,11 @@ static void test_execute_command_case_insensitive(void) {
     char *set_lower[] = { "set", "a", "1" };
     char *get_mixed[] = { "GeT", "a" };
     char *del_lower[] = { "del", "a" };
-    const char *reply = execute(ht, set_lower, 3);
+    const char *reply = execute(NULL,ht, set_lower, 3);
     CHECK(reply != NULL && strcmp(reply, "OK") == 0);
-    reply = execute(ht, get_mixed, 2);
+    reply = execute(NULL,ht, get_mixed, 2);
     CHECK(reply != NULL && strcmp(reply, "1") == 0);
-    reply = execute(ht, del_lower, 2);
+    reply = execute(NULL,ht, del_lower, 2);
     CHECK(reply != NULL && strcmp(reply, "(1)") == 0);
     CHECK(get_counting(ht) == 0);
     free_ht(ht);
@@ -471,10 +471,10 @@ static void test_execute_key_and_value_keep_case(void) {
     char *set[]       = { "SET", "Nome", "Pippo" };
     char *get_same[]  = { "GET", "Nome" };
     char *get_lower[] = { "GET", "nome" };
-    execute(ht, set, 3);
-    const char *reply = execute(ht, get_same, 2);
+    execute(NULL,ht, set, 3);
+    const char *reply = execute(NULL,ht, get_same, 2);
     CHECK(reply != NULL && strcmp(reply, "Pippo") == 0);
-    reply = execute(ht, get_lower, 2);
+    reply = execute(NULL,ht, get_lower, 2);
     CHECK(reply != NULL && strcmp(reply, "(nil)") == 0);
     free_ht(ht);
 }
@@ -485,9 +485,9 @@ static void test_execute_line_normal(void) {
     struct hash_table *ht = init_ht();
     char set[] = "  SET   a\t1  ";          /* spazi e tab vanno ignorati */
     char get[] = "get a";
-    const char *reply = execute_line(ht, set);
+    const char *reply = execute_line(NULL,ht, set);
     CHECK(reply != NULL && strcmp(reply, "OK") == 0);
-    reply = execute_line(ht, get);
+    reply = execute_line(NULL,ht, get);
     CHECK(reply != NULL && strcmp(reply, "1") == 0);
     CHECK(get_counting(ht) == 1);
     free_ht(ht);
@@ -498,8 +498,8 @@ static void test_execute_line_no_tokens(void) {
     struct hash_table *ht = init_ht();
     char empty[]  = "";
     char spaces[] = "   \t  ";
-    CHECK(execute_line(ht, empty) == NULL);
-    CHECK(execute_line(ht, spaces) == NULL);
+    CHECK(execute_line(NULL,ht, empty) == NULL);
+    CHECK(execute_line(NULL,ht, spaces) == NULL);
     CHECK(get_counting(ht) == 0);
     free_ht(ht);
 }
@@ -508,7 +508,7 @@ static void test_execute_line_no_tokens(void) {
 static void test_execute_line_too_many_tokens(void) {
     struct hash_table *ht = init_ht();
     char line[] = "SET a b c";
-    CHECK(is_error(execute_line(ht, line)));
+    CHECK(is_error(execute_line(NULL,ht, line)));
     CHECK(get_counting(ht) == 0);
     CHECK(get_value(ht, "a") == NULL);
     free_ht(ht);
@@ -519,8 +519,8 @@ static void test_execute_line_forwards_errors(void) {
     struct hash_table *ht = init_ht();
     char unknown[]  = "PIPPO a";
     char wrong[]    = "SET a";
-    CHECK(is_error(execute_line(ht, unknown)));
-    CHECK(is_error(execute_line(ht, wrong)));
+    CHECK(is_error(execute_line(NULL,ht, unknown)));
+    CHECK(is_error(execute_line(NULL,ht, wrong)));
     CHECK(get_counting(ht) == 0);
     free_ht(ht);
 }
