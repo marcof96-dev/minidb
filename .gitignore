@@ -6,3 +6,4 @@ minidb_debug
 *.dSYM/
 test_minidb
 .DS_Store
+*.aof
