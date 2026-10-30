@@ -42,7 +42,7 @@ int main(void){
 
      buf[strcspn(buf, "\n")] = 0; // Remove the trailing newline
      
-     const char *outcome = execute_line(ht,buf);
+     const char *outcome = execute_line(NULL,ht,buf);
      if(outcome == NULL){
       continue;
      }
