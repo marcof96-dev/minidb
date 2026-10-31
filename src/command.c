@@ -59,7 +59,7 @@ const char *execute_line(FILE *aof,struct hash_table *ht,char buf[]){
     if(count > MAX_TOKENS){
         return "Error: Too many tokens!";
     }
-    return execute(NULL,ht, tokens, count);
+    return execute(aof,ht, tokens, count);
 }
 
 const char *execute(FILE *aof,struct hash_table *ht, char * tokens[], size_t count){

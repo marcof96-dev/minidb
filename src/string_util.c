@@ -70,3 +70,9 @@ return 0;
 
 }
 
+int my_str_startwith(const char *s1, const char *s2){
+    if(strncmp(s1, s2, strlen(s2)) == 0) return 1;
+    return 0;
+
+}
+

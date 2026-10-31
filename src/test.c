@@ -14,7 +14,7 @@
 #include "hashtable.h"
 #include "string_util.h"
 #include "command.h"
-
+#include "aof.h"
 
 static int checks_run = 0;
 static int checks_failed = 0;
@@ -35,6 +35,19 @@ static int checks_failed = 0;
 static char *key_n(char *buf, size_t len, int i) {
     snprintf(buf, len, "k%d", i);
     return buf;
+}
+
+
+
+static FILE *make_file(const char *content){
+    FILE *f = tmpfile();
+    CHECK(f != NULL);
+    if(f == NULL){
+        return NULL;
+    }
+    fputs(content, f);
+    rewind(f);
+    return f;
 }
 
 
@@ -78,6 +91,20 @@ static void test_no_case_all_empty_string(void){
     char *b = "";
     CHECK(my_str_are_equals_nocase(a,b) == 1);
     CHECK(my_str_are_equals_nocase(b,a) == 1);
+}
+
+static void test_starts_with(void){
+    char *a = "Test";
+    char *b = "Te";
+    CHECK(my_str_startwith(a,b) == 1);
+    CHECK(my_str_startwith(b,a) == 0);
+    b = "pippo";
+    CHECK(my_str_startwith(a,b) == 0);
+    a = "";
+    CHECK(my_str_startwith(a,b) == 0);
+    a = "pippo";
+    CHECK(my_str_startwith(a,b) == 1);
+
 }
 
 
@@ -525,6 +552,70 @@ static void test_execute_line_forwards_errors(void) {
     free_ht(ht);
 }
 
+static void test_replay_std_case(void) {
+    FILE *aof_file = make_file("SET a 1\nSET b 2\nDEL a\n");
+
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 3);
+    CHECK(get_value(ht, "b") != NULL && strcmp(get_value(ht, "b"),"2") == 0);
+    CHECK(get_value(ht, "a") == NULL);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
+static void test_replay_empty_row(void) {
+    FILE *aof_file = make_file("SET a 1\n\n        \nSET b 2\n");
+
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 2);
+    CHECK(get_value(ht, "b") != NULL && strcmp(get_value(ht, "b"),"2") == 0);
+    CHECK(get_value(ht, "a") != NULL && strcmp(get_value(ht, "a"),"1") == 0);
+
+    aof_close_file(aof_file);
+    free_ht(ht);
+}
+
+static void test_replay_wrong_row(void) {
+    FILE *aof_file = make_file("SET a 1\nPippo\nSET b 2\n");
+
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 2);
+    CHECK(get_value(ht, "b") != NULL && strcmp(get_value(ht, "b"),"2") == 0);
+    CHECK(get_value(ht, "a") != NULL && strcmp(get_value(ht, "a"),"1") == 0);
+
+    aof_close_file(aof_file);
+    free_ht(ht);
+}
+
+static void test_replay_inverted_order(void) {
+    FILE *aof_file = make_file("SET a 1\nSET a 2\n");
+
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 2);
+    CHECK(get_value(ht, "a") != NULL && strcmp(get_value(ht, "a"),"2") == 0);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
+static void test_replay_does_not_write(void) {
+    FILE *aof_file = make_file("SET a 1\nSET a 2\n");
+    fseek(aof_file, 0, SEEK_END); // Comando che mi permette di andare con il cursore alla fine del file. Si traduce con "Vai alla posizione 0 a partire dalla fine del file".
+    long file_size = ftell(aof_file);
+    fseek(aof_file, 0, SEEK_SET);
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 2);
+    fseek(aof_file, 0, SEEK_END);
+    long new_file_size = ftell(aof_file);
+    CHECK(file_size == new_file_size);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
 
 
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
@@ -543,6 +634,7 @@ int main(void) {
     RUN(test_no_case_different_length_string);
     RUN(test_no_case_different_case_string);
     RUN(test_no_case_all_empty_string);
+    RUN(test_starts_with);
     //TEST HASH_TABLE
     RUN(test_empty_table);
     RUN(test_insert_and_get);
@@ -579,6 +671,16 @@ int main(void) {
     RUN(test_execute_line_no_tokens);
     RUN(test_execute_line_too_many_tokens);
     RUN(test_execute_line_forwards_errors);
+    //TEST REPLAY
+    RUN(test_replay_std_case);
+    RUN(test_replay_inverted_order);
+    RUN(test_replay_does_not_write);
+    RUN(test_replay_empty_row);
+    RUN(test_replay_wrong_row);
+    // RUN(test_check_get_del_command);
+    // RUN(test_truncated_file);
+    // RUN(test_create_file_if_not_exists);
+
 
 
     fprintf(stderr, "\n%d controlli, %d falliti\n", checks_run, checks_failed);
