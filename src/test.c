@@ -50,6 +50,46 @@ static FILE *make_file(const char *content){
     return f;
 }
 
+static FILE *make_file_with_long_set(size_t value_len){
+    FILE *f = tmpfile();
+    CHECK(f != NULL);
+    if(f == NULL){
+        return NULL;
+    }
+
+    fputs("SET a 1\n", f);                 
+
+    fputs("SET k ", f);                   
+    for(size_t i = 0; i < value_len; i++){
+        fputc('x', f);                    
+    }
+    fputs("SET z 9",f);
+    fputc('\n', f);
+
+    fputs("SET b 2\n", f);                   
+
+    rewind(f);
+    return f;
+}
+
+static FILE *make_file_with_long_set_nothing_after(size_t value_len){
+    FILE *f = tmpfile();
+    CHECK(f != NULL);
+    if(f == NULL){
+        return NULL;
+    }
+
+    fputs("SET a 1\n", f);                 
+
+    fputs("SET k ", f);                   
+    for(size_t i = 0; i < value_len; i++){
+        fputc('x', f);                    
+    }
+    
+    rewind(f);
+    return f;
+}
+
 
 static void test_no_case_equal_string(void){
     char *a = "SET";
@@ -617,6 +657,47 @@ static void test_replay_does_not_write(void) {
 }
 
 
+static void test_replay_truncate_file(void) {
+    FILE *aof_file = make_file("SET a 1\nSET b 2");
+
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 1);
+    CHECK(get_value(ht, "a") != NULL && strcmp(get_value(ht, "a"),"1") == 0);
+    CHECK(get_value(ht, "b") == NULL);
+    CHECK(ftell(aof_file) == 8);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
+static void test_replay_truncate_too_long(void) {
+    FILE *aof_file = make_file_with_long_set(1500);
+
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 2);
+    CHECK(get_value(ht, "a") != NULL && strcmp(get_value(ht, "a"),"1") == 0);
+    CHECK(get_value(ht, "b") != NULL);
+    
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
+static void test_replay_truncate_jump_command(void) {
+    FILE *aof_file = make_file_with_long_set_nothing_after(1017);
+
+    struct hash_table *ht = init_ht();
+    
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 1);
+    CHECK(get_value(ht, "z") == NULL);
+    CHECK(ftell(aof_file) == 8);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
+
+
 
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
 #define RUN(test) do {                                                    \
@@ -677,8 +758,9 @@ int main(void) {
     RUN(test_replay_does_not_write);
     RUN(test_replay_empty_row);
     RUN(test_replay_wrong_row);
-    // RUN(test_check_get_del_command);
-    // RUN(test_truncated_file);
+    RUN(test_replay_truncate_file);
+    RUN(test_replay_truncate_too_long);
+    RUN(test_replay_truncate_jump_command);
     // RUN(test_create_file_if_not_exists);
 
 
