@@ -11,7 +11,51 @@ FILE *aof_open(const char *path){
     return aof_file;
 }
 
+static size_t from_token_to_char(char *out, size_t out_size, char *tokens[], size_t count){
+    if(out_size == 0){
+        return -1;
+    }
+    size_t used = 0;
+    for(size_t i = 0; i < count; i++){
+        size_t len = mia_strlen(tokens[i]);
+        size_t needed = len + (i > 0 ? 1 : 0);
+        if(used + needed + 1 > out_size){
+            return -1;
+        }
+        if(i > 0){
+            out[used++] = ' ';
+        }
+        memcpy(out + used, tokens[i], len);
+        used += len;
+    }
+    out[used] = '\n';
+    used++;
+    return used;
+}
+
 int aof_write_row(FILE *aof_file, char *tokens[],size_t count){
+    char buf[1024];
+    size_t writed_bytes= from_token_to_char(buf,1024,tokens,count);
+    if(writed_bytes == -1){
+        fprintf(stderr, "Error! Failed to create row\n");
+        return 0;
+    }
+    size_t len = fwrite(buf,1,writed_bytes,aof_file);
+    if(len != writed_bytes){
+        fprintf(stderr, "Error! Failed fwrite of command %s\n",tokens[0]);
+        return 0;
+    }
+    if(fflush(aof_file) != 0){
+        fprintf(stderr, "Error! Failed fflush!\n");
+        return 0;
+
+    }
+
+    int fd = fileno(aof_file);
+    if(fsync(fd) != 0){
+        fprintf(stderr, "Error! Failed fsynch!\n");
+        return 0;
+    }
     return 1;
 }
 

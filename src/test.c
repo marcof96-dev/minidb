@@ -695,9 +695,46 @@ static void test_replay_truncate_jump_command(void) {
     free_ht(ht);
     aof_close_file(aof_file);
 }
+static void test_aof_write_row(void) {
+    FILE *aof_file = make_file("");
+    char *tokens[] = {"Set","a","1"};
+    int outcome = aof_write_row(aof_file, tokens,3);
+    CHECK(outcome == 1);
+    rewind(aof_file);
+    char buf[1024];
+    CHECK(fgets(buf,sizeof(buf),aof_file)!=NULL && strcmp(buf,"Set a 1\n")==0);
 
+    aof_close_file(aof_file);
+}
 
+static void test_aof_write_row_two_rows(void) {
+    FILE *aof_file = make_file("");
+    
+    char buf[1024];
+    char *tokens[] = {"Set","a","1"};
+    aof_write_row(aof_file, tokens,3);
+    aof_write_row(aof_file, tokens,3);
+    rewind(aof_file); 
+    CHECK(fgets(buf,sizeof(buf),aof_file)!=NULL && strcmp(buf,"Set a 1\n")==0);
+    CHECK(fgets(buf,sizeof(buf),aof_file)!=NULL && strcmp(buf,"Set a 1\n")==0);
+    CHECK(fgets(buf,sizeof(buf),aof_file)==NULL);
+    
+    aof_close_file(aof_file);
+}
 
+static void test_aof_write_row_and_replay(void) {
+    FILE *aof_file = make_file("");
+    char *tokens[] = {"Set","a","1"};
+    int outcome = aof_write_row(aof_file, tokens,3);
+    CHECK(outcome == 1);
+    rewind(aof_file);
+    struct hash_table *ht = init_ht();
+    int n_commands = aof_replay(ht, aof_file);
+    CHECK(n_commands == 1);
+    CHECK(get_value(ht, "a") != NULL && strcmp(get_value(ht, "a"),"1") == 0);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
 
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
 #define RUN(test) do {                                                    \
@@ -761,6 +798,10 @@ int main(void) {
     RUN(test_replay_truncate_file);
     RUN(test_replay_truncate_too_long);
     RUN(test_replay_truncate_jump_command);
+    //Test Write
+    RUN(test_aof_write_row);
+    RUN(test_aof_write_row_two_rows);
+    RUN(test_aof_write_row_and_replay);
     // RUN(test_create_file_if_not_exists);
 
 

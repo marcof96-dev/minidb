@@ -7,6 +7,7 @@ struct hash_table;
 FILE *aof_open(const char *path);
 
 /*This method writes in the aof_file (file with extension .aof) every string stored in tokens[] variable separated each string by a blank space
+ * writes tokens as given, no normalization 
  * Params:
  * - aof_file -> the file where to write.
  * - tokens[] -> array of String. Every bucket contains a single word of the user input.
