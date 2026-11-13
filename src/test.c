@@ -736,6 +736,53 @@ static void test_aof_write_row_and_replay(void) {
     aof_close_file(aof_file);
 }
 
+static void test_execute_writes_only_changes(void) {
+    FILE *aof_file = make_file("");
+    struct hash_table *ht = init_ht();
+    char set[] = "SET a 1";          /* spazi e tab vanno ignorati */
+    char get[] = "get a";
+    char del[] = "DEL a";
+    char delc[] = "DEL c";
+    const char *reply = execute_line(aof_file,ht, set);
+    CHECK(reply != NULL && strcmp(reply, "OK") == 0);
+    fseek(aof_file, 0, SEEK_END); // Comando che mi permette di andare con il cursore alla fine del file. Si traduce con "Vai alla posizione 0 a partire dalla fine del file".
+    long file_size = ftell(aof_file);
+    CHECK(file_size == 8);
+    reply = execute_line(aof_file,ht, get);
+    fseek(aof_file, 0, SEEK_END);
+    file_size = ftell(aof_file);
+    CHECK(file_size == 8);
+    reply = execute_line(aof_file,ht, del);
+    fseek(aof_file, 0, SEEK_END);
+    CHECK(reply != NULL && strcmp(reply, "(1)") == 0);
+    file_size = ftell(aof_file);
+    CHECK(file_size == 14);
+    reply = execute_line(aof_file,ht, delc);
+    fseek(aof_file, 0, SEEK_END);
+    CHECK(reply != NULL && strcmp(reply, "(0)") == 0);
+    file_size = ftell(aof_file);
+    CHECK(file_size == 14);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
+static void test_failed_writing(void) {
+    FILE *aof_file = make_file("");
+    char buf[1500];
+    buf[0]='S';buf[1]='E';buf[2]='T'; buf[3]=' ';buf[4]='k';buf[5]=' ';                  
+    for(size_t i = 6; i < sizeof(buf)-1; i++){
+        buf[i] = 'x';                  
+    }
+    buf[1498] = '\n';
+    buf[1499] = '\0';
+    struct hash_table *ht = init_ht();
+    const char *reply = execute_line(aof_file,ht, buf);
+    CHECK(is_error(reply));
+    CHECK(get_value(ht, "k") == NULL);
+    free_ht(ht);
+    aof_close_file(aof_file);
+}
+
 /* Esegue un test e stampa OK/FAIL confrontando i fallimenti prima e dopo. */
 #define RUN(test) do {                                                    \
     int failed_before = checks_failed;                                    \
@@ -802,7 +849,8 @@ int main(void) {
     RUN(test_aof_write_row);
     RUN(test_aof_write_row_two_rows);
     RUN(test_aof_write_row_and_replay);
-    // RUN(test_create_file_if_not_exists);
+    RUN(test_execute_writes_only_changes);
+    RUN(test_failed_writing);
 
 
 

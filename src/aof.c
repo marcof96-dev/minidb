@@ -13,14 +13,14 @@ FILE *aof_open(const char *path){
 
 static size_t from_token_to_char(char *out, size_t out_size, char *tokens[], size_t count){
     if(out_size == 0){
-        return -1;
+        return 0;
     }
     size_t used = 0;
     for(size_t i = 0; i < count; i++){
         size_t len = mia_strlen(tokens[i]);
         size_t needed = len + (i > 0 ? 1 : 0);
         if(used + needed + 1 > out_size){
-            return -1;
+            return 0;
         }
         if(i > 0){
             out[used++] = ' ';
@@ -36,7 +36,7 @@ static size_t from_token_to_char(char *out, size_t out_size, char *tokens[], siz
 int aof_write_row(FILE *aof_file, char *tokens[],size_t count){
     char buf[1024];
     size_t writed_bytes= from_token_to_char(buf,1024,tokens,count);
-    if(writed_bytes == -1){
+    if(writed_bytes == 0){
         fprintf(stderr, "Error! Failed to create row\n");
         return 0;
     }

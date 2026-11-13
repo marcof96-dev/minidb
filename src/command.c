@@ -3,7 +3,7 @@
 #include "command.h"
 #include "hashtable.h"
 #include "string_util.h"
-
+#include "aof.h"
 
 
 #define MAX_TOKENS 3
@@ -82,14 +82,35 @@ const char *execute(FILE *aof,struct hash_table *ht, char * tokens[], size_t cou
         }
             
         case CMD_SET:{
-            insert_item(ht,tokens[1], tokens[2]);
+            
+            if(aof==NULL){
+                insert_item(ht,tokens[1], tokens[2]);
+            }else{
+                int outcome = aof_write_row(aof, tokens, count);
+                if(outcome != 1){
+                    return "Error: Impossible write record";
+                }
+                insert_item(ht,tokens[1], tokens[2]);
+            }
             return "OK";
         
         }
             
         case CMD_DEL:{
-             int is_deleted = delete_item(ht, tokens[1]);
-             return is_deleted == 1 ? "(1)" : "(0)";
+            int is_deleted = 0;
+            if(aof == NULL){
+                is_deleted = delete_item(ht, tokens[1]);
+            }else{
+                const char *value = get_value(ht,tokens[1]);
+                if(value != NULL){
+                    int outcome = aof_write_row(aof, tokens, count);
+                    if(outcome != 1){
+                        return "Error: Impossible write record";
+                    }
+                    is_deleted = delete_item(ht, tokens[1]);
+                }                
+            }
+            return is_deleted == 1 ? "(1)" : "(0)";
         }
            
     } 
