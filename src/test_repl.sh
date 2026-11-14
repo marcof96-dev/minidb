@@ -27,8 +27,24 @@ if [[ ! -x $BIN ]]; then
     exit 2
 fi
 
-# esegue il comando con un timeout di 3 secondi; se exec fallisce esce con 127
-t() { perl -e 'alarm 3; exec @ARGV; print STDERR "exec fallita: $!\n"; exit 127' "$@"; }
+# percorso assoluto del binario: i test girano in un'altra cartella
+BIN="$(cd "$(dirname "$BIN")" && pwd)/$(basename "$BIN")"
+
+# ogni test gira in una cartella temporanea sua, cosi' il minidb.aof
+# di un test non contamina gli altri; tutto viene cancellato all'uscita
+TMP_ROOT=$(mktemp -d)
+trap 'rm -rf "$TMP_ROOT"' EXIT
+
+# esegue il comando nella cartella $1 con un timeout di 3 secondi; se exec fallisce esce con 127
+run_in() { local dir=$1; shift; (cd "$dir" && perl -e 'alarm 3; exec @ARGV; print STDERR "exec fallita: $!\n"; exit 127' "$@"); }
+
+# t: esegue in una cartella nuova e vuota (nessun AOF dai test precedenti)
+t() { run_in "$(mktemp -d "$TMP_ROOT/test.XXXXXX")" "$@"; }
+
+# per i test di persistenza: new_work crea la cartella (va chiamata fuori da $(...),
+# altrimenti WORK resta nella subshell), t_same esegue sempre li'
+new_work() { WORK=$(mktemp -d "$TMP_ROOT/aof.XXXXXX"); }
+t_same() { run_in "$WORK" "$@"; }
 
 # genera N caratteri 'a'
 rep() { head -c "$1" /dev/zero | tr '\0' 'a'; }
@@ -123,6 +139,50 @@ check "troppi token" 0 "Too many tokens" "OK"
 # 20. Riga di soli spazi: viene saltata senza errori
 out=$(printf '   \t  \n' | t "$BIN" 2>&1); code=$?
 check "riga di soli spazi" 0 "> " "Error"
+
+# --- Persistenza (AOF) ---
+
+# 21. Riavvio: i dati della prima esecuzione ci sono nella seconda
+new_work
+out=$(printf 'SET a 1\nSET b 2\nDEL a\n' | t_same "$BIN" 2>&1)
+out=$(printf 'GET b\nGET a\n' | t_same "$BIN" 2>&1); code=$?
+check "riavvio: SET sopravvive" 0 "> 2" ""
+check "riavvio: DEL sopravvive" 0 "(nil)" ""
+
+# 22. Il file contiene esattamente i comandi che hanno modificato la tabella
+out=$(cat "$WORK/minidb.aof"); code=0
+expected=$'SET a 1\nSET b 2\nDEL a'
+if [[ $out == "$expected" ]]; then
+    echo "PASS  contenuto dell'AOF"; ((pass++))
+else
+    echo "FAIL  contenuto dell'AOF"
+    echo "      file: $(printf '%s' "$out" | head -c 200)"
+    ((fail++))
+fi
+
+# 23. Comandi che non modificano la tabella non vengono scritti
+new_work
+out=$(printf 'GET a\nDEL x\nPIPPO\nSET a\n' | t_same "$BIN" 2>&1)
+size=$(wc -c < "$WORK/minidb.aof" | tr -d ' ')
+out="size=$size"; code=0
+check "letture ed errori non scritti nell'AOF" 0 "size=0" ""
+
+# 24. Riga troncata (crash simulato): viene rimossa e il file resta usabile
+new_work
+out=$(printf 'SET a 1\n' | t_same "$BIN" 2>&1)
+printf 'SET c 3' >> "$WORK/minidb.aof"
+out=$(printf 'GET c\nSET d 4\n' | t_same "$BIN" 2>&1); code=$?
+check "riga troncata: segnalata" 0 "Truncated" ""
+check "riga troncata: non eseguita" 0 "(nil)" ""
+out=$(cat "$WORK/minidb.aof"); code=0
+expected=$'SET a 1\nSET d 4'
+if [[ $out == "$expected" ]]; then
+    echo "PASS  riga troncata: file riparato"; ((pass++))
+else
+    echo "FAIL  riga troncata: file riparato"
+    echo "      file: $(printf '%s' "$out" | head -c 200)"
+    ((fail++))
+fi
 
 echo
 echo "Risultato: $pass passati, $fail falliti"

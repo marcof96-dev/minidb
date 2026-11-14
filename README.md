@@ -5,7 +5,9 @@ It was implemented from scratch for study purposes. I followed [antirez's C cour
 The store is built on a hash table that handles insertion, update, deletion and retrieval of data; collisions are handled through a Separate Chaining algorithm.
 It resizes itself automatically: once the load factor reaches 0.7, the capacity is doubled.
 It has a REPL: the user types a command on the command line, the input is split into tokens and the command is executed on the hash table.
-
+Data persistence is handled through a file with the .aof extension. Insert commands (SET) and delete commands for an existing key (DEL) are written to the file and then saved to disk through fflush and fsync. Only after that are they applied to the data structure.
+At startup, the program reads the path of the .aof file passed as a command-line argument or, if no parameter is passed, a file called "minidb.aof". Once the file is open, it reads each line, applies the command written in it and inserts it into the data structure.
+If the last line is incomplete (for example because of a crash), it is removed from the file at startup. If opening the file fails, the program exits with an error. Invalid or too-long lines are skipped and reported on stderr with their line number.
 ## Usage
 
 To compile the program:
@@ -28,9 +30,10 @@ make leaks will work only on a macOS system.
 
 Once compiled, run it with the following command
 ```bash
-$ ./minidb
+$ ./minidb [file] 
 ```
-
+with  minidb.aof as default
+A relative path is resolved from the directory where you launch the program, not from the directory of the binary.
 ### Commands
 
 | Command           | Description                          | Reply                          |
@@ -76,7 +79,6 @@ Some tests are in a file called test_repl.sh:
 
 ## Roadmap
 The project currently has many limitations that I aim to solve in future development:
-- There is no data persistence: when the program is shut down, restarted or crashes, the data structure is emptied
 - Keys and values cannot contain spaces: `SET nome foo bar` is rejected because the input is split on whitespace
 - An input line can be at most 1022 characters long
 - Strings are not binary safe: the input cannot contain NUL bytes

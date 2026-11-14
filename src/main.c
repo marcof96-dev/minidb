@@ -3,14 +3,24 @@
 #include "hashtable.h"
 #include "string_util.h"
 #include "command.h"
-
+#include "aof.h"
 
 #define BUF_SIZE 1024 
 
 
-int main(void){
+int main(int argc, char *argv[]){
    char buf[BUF_SIZE];
    struct hash_table *ht = init_ht();
+   FILE *aof_file = aof_open(argc > 1 ? argv[1] : "minidb.aof");
+   if(aof_file==NULL){
+      perror("Unable to open file");
+      return 1;
+   }
+   int count = aof_replay(ht,aof_file);
+   if(count == -1){
+      perror("Unable to execute file");
+      return 1;
+   }
    while(1){
     printf("> ");
      fflush(stdout);
@@ -42,7 +52,7 @@ int main(void){
 
      buf[strcspn(buf, "\n")] = 0; // Remove the trailing newline
      
-     const char *outcome = execute_line(NULL,ht,buf);
+     const char *outcome = execute_line(aof_file,ht,buf);
      if(outcome == NULL){
       continue;
      }
@@ -50,5 +60,6 @@ int main(void){
    }
    printf("\n");
    free_ht(ht);
-
+   aof_close_file(aof_file);
+   return 0;
 }

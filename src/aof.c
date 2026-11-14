@@ -141,7 +141,11 @@ int aof_replay(struct hash_table *ht, FILE *aof_file){
 
 
 int aof_close_file(FILE *aof){
-    return 1;
+    int close_outcome = fclose(aof);
+    if(close_outcome == 0){
+        return 1;
+    }
+    return 0;
 }
 
 
